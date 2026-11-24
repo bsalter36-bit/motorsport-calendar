@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Motorsport Calendar</title>
+<meta name="description" content="F1, F2, F3 and rally championship dates in one calendar.">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Calendar">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #F2F2F7;
+  --card: #FFFFFF;
+  --elev: #FFFFFF;
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, .6);
+  --label-3: rgba(60, 60, 67, .3);
+  --sep: rgba(60, 60, 67, .2);
+  --fill: rgba(120, 120, 128, .12);
+  --fill-2: rgba(120, 120, 128, .07);
+  --tint: #007AFF;
+  --today: #FF3B30;
+  --live: #34C759;
+  --bar-bg: rgba(249, 249, 249, .8);
+  --seg-active: #FFFFFF;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .06);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --tabbar-h: 54px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1C1C1E;
+    --elev: #2C2C2E;
+    --label: #FFFFFF;
+    --label-2: rgba(235, 235, 245, .6);
+    --label-3: rgba(235, 235, 245, .3);
+    --sep: rgba(84, 84, 88, .6);
+    --fill: rgba(118, 118, 128, .24);
+    --fill-2: rgba(118, 118, 128, .12);
+    --tint: #0A84FF;
+    --today: #FF453A;
+    --live: #30D158;
+    --bar-bg: rgba(22, 22, 24, .8);
+    --seg-active: #636366;
+    --shadow: none;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(110px + env(safe-area-inset-top, 0px)); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--label);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 8px;
+}
+a { color: var(--tint); }
+svg { display: block; }
+[hidden] { display: none !important; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---------- Navigation bar ---------- */
+.navbar {
+  position: sticky; top: 0; z-index: 40;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--bar-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: .5px solid transparent;
+  transition: border-color .2s;
+}
+.navbar.scrolled { border-bottom-color: var(--sep); }
+.navbar-inner {
+  max-width: 1200px; margin: 0 auto;
+  height: 50px; padding: 0 10px;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+}
+.nav-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand { display: none; font: 700 17px var(--font-display); white-space: nowrap; }
+.nav-title { font-weight: 600; font-size: 17px; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+.navbar.scrolled .nav-title { opacity: 1; }
+.nav-right { display: flex; justify-content: flex-end; gap: 2px; }
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 20px;
+  display: grid; place-items: center; color: var(--tint);
+}
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn:active { opacity: .35; }
+
+.year-wrap { position: relative; display: inline-flex; align-items: center; color: var(--tint); }
+.year-wrap select {
+  appearance: none; -webkit-appearance: none;
+  border: 0; background: var(--fill); color: var(--tint);
+  font: 600 15px var(--font); font-variant-numeric: tabular-nums;
+  height: 32px; padding: 0 28px 0 12px; border-radius: 16px; cursor: pointer;
+}
+.year-wrap svg { position: absolute; right: 10px; width: 10px; height: 10px; pointer-events: none; }
+
+.segmented {
+  display: none; grid-auto-flow: column; grid-auto-columns: 1fr;
+  background: var(--fill); border-radius: 9px; padding: 2px; min-width: 380px;
+}
+.segmented button {
+  font-size: 13px; font-weight: 500; padding: 5px 14px; border-radius: 7px;
+  transition: background .15s;
+}
+.segmented button.active {
+  background: var(--seg-active); font-weight: 600;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04);
+}
+
+/* ---------- Page ---------- */
+main {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 28px);
+}
+.page-head { padding: 4px 4px 10px; }
+.large-title { margin: 0; font: 700 34px/41px var(--font-display); letter-spacing: .01em; }
+.page-sub { margin: 2px 0 0; font-size: 15px; color: var(--label-2); }
+
+.toolbar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.toolbar-row { display: flex; flex-direction: column; gap: 10px; }
+.search {
+  display: flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 8px; border-radius: 10px;
+  background: var(--fill); color: var(--label-2);
+}
+.search svg { width: 16px; height: 16px; flex: none; }
+.search input {
+  flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+  font: 17px var(--font); color: var(--label);
+}
+.search input::placeholder { color: var(--label-2); }
+.search .clear { width: 22px; height: 22px; display: grid; place-items: center; color: var(--label-3); }
+
+.scroller {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -16px; padding: 2px 16px;
+  scroll-snap-type: x proximity;
+}
+.scroller::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: none; height: 32px; padding: 0 12px 0 10px; border-radius: 16px;
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--card); color: var(--label-2);
+  font-size: 14px; font-weight: 500; white-space: nowrap;
+  box-shadow: inset 0 0 0 .5px var(--sep);
+  scroll-snap-align: start;
+  transition: background .15s, color .15s;
+}
+.chip .dot { width: 10px; height: 10px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--c); }
+.chip.on { color: var(--label); background: color-mix(in srgb, var(--c) 16%, var(--card)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent); }
+.chip.on .dot { background: var(--c); }
+.chip.all.on { background: var(--label); color: var(--bg); box-shadow: none; }
+.chip:active { transform: scale(.96); }
+
+.month-pill {
+  flex: none; position: relative; height: 30px; padding: 0 13px; border-radius: 15px;
+  background: var(--fill-2); font-size: 14px; font-weight: 600; color: var(--label);
+  scroll-snap-align: start;
+}
+.month-pill.empty { color: var(--label-3); }
+.month-pill.active { background: var(--label); color: var(--bg); }
+.month-pill.current::after {
+  content: ""; position: absolute; top: 4px; right: 5px;
+  width: 6px; height: 6px; border-radius: 3px; background: var(--today);
+}
+
+/* ---------- Up next (the one bold element) ---------- */
+.upnext {
+  position: relative; overflow: hidden; cursor: pointer;
+  border-radius: 22px; padding: 18px 20px 18px;
+  background: var(--c); color: var(--on);
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: end;
+  margin-bottom: 18px;
+  transition: transform .15s;
+}
+.upnext:active { transform: scale(.985); }
+.upnext.prov { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 8px, transparent 8px 16px); }
+.upnext .kicker { grid-column: 1 / -1; font-size: 15px; font-weight: 600; opacity: .8; }
+.upnext .title { font: 700 26px/1.15 var(--font-display); margin: 2px 0 4px; letter-spacing: .005em; }
+.upnext .when { font-size: 15px; font-weight: 500; opacity: .85; }
+.upnext .count { text-align: right; line-height: 1; }
+.upnext .num { font: 800 56px/0.9 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.upnext .unit { font-size: 15px; font-weight: 600; opacity: .8; margin-top: 4px; }
+.upnext .also { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.upnext .also span {
+  font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 8px;
+  background: rgba(255,255,255,.88); color: #000;
+}
+.upnext .also span i { display: inline-block; width: 8px; height: 8px; border-radius: 4px; background: var(--c2); margin-right: 5px; vertical-align: 0; }
+
+/* ---------- Grouped lists ---------- */
+.group { background: var(--card); border-radius: 12px; overflow: hidden; }
+.section { margin-bottom: 22px; break-inside: avoid; }
+.section-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 0 4px 8px;
+}
+.section-head h2 { margin: 0; font: 700 22px var(--font-display); }
+.section-head h2.cur { color: var(--today); }
+.section-head .n { font-size: 15px; color: var(--label-2); }
+
+.row {
+  position: relative; display: grid; grid-template-columns: 4px 1fr auto;
+  gap: 12px; align-items: center;
+  padding: 10px 16px 10px 12px; min-height: 60px; cursor: pointer;
+}
+.row + .row::before {
+  content: ""; position: absolute; top: 0; left: 28px; right: 0;
+  height: .5px; background: var(--sep);
+}
+.row:active, .row:hover { background: var(--fill-2); }
+.row .bar { width: 4px; align-self: stretch; border-radius: 2px; background: var(--c); }
+.row.prov .bar { background: repeating-linear-gradient(180deg, var(--c) 0 5px, transparent 5px 8px); }
+.row .main { min-width: 0; }
+.row .t { font-size: 17px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .s { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 13px; color: var(--label-2); white-space: nowrap; overflow: hidden; }
+.row .end { text-align: right; white-space: nowrap; }
+.row .d { font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.row .rel { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+.row.live .rel { color: var(--live); font-weight: 600; }
+.row.past { opacity: .45; }
+.badge {
+  display: inline-block; font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 3px 6px; border-radius: 5px; color: var(--label-2);
+  box-shadow: inset 0 0 0 1px var(--label-3);
+}
+
+.empty {
+  text-align: center; padding: 48px 20px; color: var(--label-2);
+}
+.empty h3 { margin: 0 0 6px; color: var(--label); font: 600 20px var(--font-display); }
+.empty button { margin-top: 14px; color: var(--tint); font-weight: 600; }
+
+/* ---------- Month view ---------- */
+.month-card { background: var(--card); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 22px; touch-action: pan-y; }
+.month-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px 18px; }
+.month-head h2 { margin: 0; font: 700 24px var(--font-display); }
+.month-head h2 span { color: var(--today); }
+.ctrls { display: flex; gap: 8px; align-items: center; }
+.circle-btn { width: 34px; height: 34px; border-radius: 17px; background: var(--fill); color: var(--tint); display: grid; place-items: center; }
+.circle-btn svg { width: 14px; height: 14px; }
+.pill-btn { height: 34px; padding: 0 14px; border-radius: 17px; background: var(--fill); color: var(--tint); font-size: 15px; font-weight: 600; }
+.dow { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 0 6px; text-align: center; font-size: 12px; font-weight: 600; color: var(--label-2); }
+.week { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); border-top: .5px solid var(--sep); }
+.day { padding: 6px 4px 0; min-height: 96px; border-left: .5px solid var(--sep); }
+.day:first-child { border-left: 0; }
+.day.we { background: var(--fill-2); }
+.day .n { width: 28px; height: 28px; margin: 0 auto; display: grid; place-items: center; border-radius: 14px; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.day.out .n { color: var(--label-3); }
+.day.today .n { background: var(--today); color: #fff; font-weight: 700; }
+.ebar {
+  position: absolute; z-index: 2; height: 22px; line-height: 22px;
+  padding: 0 6px; border-radius: 6px;
+  background: var(--c); color: var(--on);
+  font-size: 12px; font-weight: 600; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.ebar.cl { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.ebar.cr { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ebar.prov { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.28) 0 5px, transparent 5px 10px); }
+.ebar:hover { filter: brightness(1.08); }
+
+/* ---------- Year view: wide lane grid ---------- */
+.yg-wrap { background: var(--card); border-radius: 20px; overflow: auto; box-shadow: var(--shadow); max-height: calc(100dvh - 190px); }
+.yg { display: grid; grid-template-columns: 56px repeat(31, minmax(30px, 1fr)); min-width: 1060px; }
+.yg .h { position: sticky; top: 0; z-index: 4; background: var(--card); text-align: center; padding: 9px 0 7px; font-size: 11px; font-weight: 600; color: var(--label-2); border-bottom: .5px solid var(--sep); font-variant-numeric: tabular-nums; }
+.yg .h.corner { left: 0; z-index: 5; }
+.yg .m { position: sticky; left: 0; z-index: 3; background: var(--card); display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; font-size: 13px; font-weight: 700; border-right: .5px solid var(--sep); border-bottom: .5px solid var(--sep); cursor: pointer; }
+.yg .m.cur { color: var(--today); }
+.yg .dw { text-align: center; font-size: 10px; font-weight: 600; color: var(--label-3); padding: 4px 0 2px; }
+.yg .dw.we { color: var(--label-2); }
+.yg .lc { position: relative; height: 26px; }
+.yg .we { background: var(--fill-2); }
+.yg .na { background: repeating-linear-gradient(135deg, var(--fill-2) 0 3px, transparent 3px 7px); }
+.yg .last { border-bottom: .5px solid var(--sep); }
+.yg .td { box-shadow: inset 1.5px 0 0 var(--today), inset -1.5px 0 0 var(--today); }
+.ybar {
+  position: absolute; left: 1px; top: 3px; height: 20px; line-height: 20px; z-index: 2;
+  padding: 0 5px; border-radius: 5px; background: var(--c); color: var(--on);
+  font-size: 10.5px; font-weight: 600; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+.ybar.one { padding: 0 1px; letter-spacing: -.02em; }
+.ybar.prov { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.28) 0 4px, transparent 4px 8px); }
+.ybar:hover { filter: brightness(1.08); z-index: 3; }
+
+/* ---------- Year view: compact mini months ---------- */
+.minis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.mini { background: var(--card); border-radius: 16px; padding: 12px 8px 10px; cursor: pointer; text-align: left; display: flex; flex-direction: column; justify-content: flex-start; }
+.mini:active { transform: scale(.98); }
+.mini-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 6px; }
+.mini-head b { font: 700 17px var(--font-display); }
+.mini.cur .mini-head b { color: var(--today); }
+.mini-head span { font-size: 12px; color: var(--label-2); }
+.mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 1px; }
+.md { height: 22px; display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.md span { width: 17px; height: 15px; display: grid; place-items: center; border-radius: 8px; }
+.md.today span { background: var(--today); color: #fff; font-weight: 700; }
+.md .dots { display: flex; gap: 1px; height: 4px; margin-top: 1px; }
+.md .dots i { width: 4px; height: 4px; border-radius: 2px; background: var(--c); }
+
+/* ---------- Series / settings ---------- */
+.set-head { padding: 0 16px 7px; font-size: 13px; color: var(--label-2); }
+.set-foot { padding: 7px 16px 0; font-size: 13px; color: var(--label-2); line-height: 1.4; }
+.set-group { margin-bottom: 26px; }
+.srow { position: relative; display: flex; align-items: center; gap: 12px; padding: 0 16px; min-height: 52px; width: 100%; text-align: left; }
+.srow + .srow::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: .5px; background: var(--sep); }
+.srow.plain + .srow::before, .srow + .srow.plain::before { left: 16px; }
+.icon { flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--c); color: var(--on); display: grid; place-items: center; font-size: 9.5px; font-weight: 800; letter-spacing: -.01em; }
+.srow .txt { flex: 1; min-width: 0; padding: 8px 0; }
+.srow .txt b { display: block; font-weight: 400; font-size: 17px; line-height: 1.25; }
+.srow .txt small { display: block; font-size: 13px; color: var(--label-2); }
+.srow .val { color: var(--label-2); font-size: 17px; }
+.srow.action { color: var(--tint); }
+.srow.action:active { background: var(--fill-2); }
+
+.switch { position: relative; flex: none; width: 51px; height: 31px; }
+.switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.switch .track { position: absolute; inset: 0; border-radius: 16px; background: var(--fill); transition: background .2s; }
+.switch .thumb { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 14px; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06); transition: transform .22s cubic-bezier(.3,.7,.4,1); }
+.switch input:checked ~ .track { background: var(--live); }
+.switch input:checked ~ .thumb { transform: translateX(20px); }
+.switch input:focus-visible ~ .track { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* ---------- Bottom tab bar (phones) ---------- */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bar-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: .5px solid var(--sep);
+}
+.tab { height: var(--tabbar-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--label-2); }
+.tab svg { width: 25px; height: 25px; }
+.tab.active { color: var(--tint); }
+
+/* ---------- Sheet (event details) ---------- */
+.backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.backdrop.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  width: 100%; max-width: 560px; max-height: 92dvh; overflow: auto; overscroll-behavior: contain;
+  background: var(--bg); border-radius: 14px 14px 0 0;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  transform: translateY(100%); transition: transform .34s cubic-bezier(.2,.85,.25,1);
+}
+.backdrop.open .sheet { transform: translateY(0); }
+.sheet.dragging { transition: none; }
+.grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--label-3); margin: 6px auto 0; }
+.sheet-top { display: flex; justify-content: flex-end; padding: 4px 12px 0; }
+.done { color: var(--tint); font-size: 17px; font-weight: 600; padding: 8px 6px; }
+.hero {
+  margin: 0 16px 18px; padding: 18px 18px 20px; border-radius: 18px;
+  background: var(--c); color: var(--on);
+}
+.hero.prov { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 8px, transparent 8px 16px); }
+.hero .series { font-size: 15px; font-weight: 600; opacity: .85; }
+.hero h2 { margin: 6px 0 6px; font: 700 26px/1.15 var(--font-display); }
+.hero .dates { font-size: 15px; font-weight: 500; opacity: .9; }
+.sheet .group { margin: 0 16px 16px; }
+.kv { position: relative; display: flex; justify-content: space-between; gap: 16px; padding: 13px 16px; font-size: 17px; }
+.kv + .kv::before, .kv + .act::before, .act + .act::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: .5px; background: var(--sep); }
+.kv .v { color: var(--label-2); text-align: right; }
+.kv .v.live { color: var(--live); font-weight: 600; }
+.note { padding: 0 32px 16px; font-size: 13px; color: var(--label-2); line-height: 1.45; }
+.act { position: relative; display: block; width: 100%; text-align: left; padding: 13px 16px; font-size: 17px; color: var(--tint); }
+.act:active { background: var(--fill-2); }
+
+.toast {
+  position: fixed; left: 50%; z-index: 120;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+  background: var(--elev); color: var(--label); box-shadow: 0 8px 30px rgba(0,0,0,.18);
+  padding: 10px 16px; border-radius: 20px; font-size: 14px; font-weight: 500;
+  transition: opacity .2s, transform .2s; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.foot { text-align: center; font-size: 12px; color: var(--label-2); padding: 18px 0 0; }
+
+/* ---------- Wide screens ---------- */
+@media (min-width: 760px) {
+  body { font-size: 15px; }
+  .brand { display: block; }
+  .navbar-inner { padding: 0 32px; }
+  .nav-title { display: none; }
+  .segmented { display: inline-grid; }
+  .tabbar { display: none; }
+  main { padding: 6px 28px 48px; }
+  .page-head { padding: 14px 4px 12px; }
+  .scroller { margin: 0; padding: 2px 0; flex-wrap: wrap; overflow: visible; }
+  .toolbar .search { max-width: 360px; }
+  .toolbar-row { flex-direction: row; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .toast { bottom: 28px; }
+  .row .t { font-size: 15px; }
+  .list.cols { columns: 2; column-gap: 28px; }
+  .upnext { padding: 22px 26px; }
+  .upnext .title { font-size: 30px; }
+  .upnext .num { font-size: 68px; }
+  .backdrop { align-items: center; }
+  .sheet { max-width: 460px; border-radius: 18px; transform: scale(.96); opacity: 0; transition: transform .2s, opacity .2s; padding-bottom: 12px; }
+  .backdrop.open .sheet { transform: none; opacity: 1; }
+  .grabber { display: none; }
+  .settings { max-width: 640px; }
+  .month-agenda { max-width: 760px; }
+}
+@media (max-width: 759px) {
+  .day { min-height: 64px; padding: 4px 1px 0; }
+  .day .n { width: 24px; height: 24px; font-size: 13px; }
+  .ebar { height: 18px; line-height: 18px; font-size: 10px; padding: 0 3px; border-radius: 4px; }
+  .month-head h2 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="navbar" id="navbar">
+  <div class="navbar-inner">
+    <div class="nav-left">
+      <span class="brand">Motorsport Calendar</span>
+      <label class="year-wrap">
+        <select id="year-select" aria-label="Year"></select>
+        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5 5 6.5 8 3.5"/></svg>
+      </label>
+    </div>
+    <div class="nav-center">
+      <span class="nav-title" id="nav-title">Events</span>
+      <div class="segmented" id="segmented" role="tablist" aria-label="View">
+        <button role="tab" data-view="list">Events</button>
+        <button role="tab" data-view="month">Month</button>
+        <button role="tab" data-view="year">Year</button>
+        <button role="tab" data-view="series">Series</button>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button class="nav-btn" id="add-btn" aria-label="Add or edit events" title="Add or edit events" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="nav-btn" id="export-btn" aria-label="Add these events to your calendar" title="Add these events to your calendar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v6.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V12"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="page-head">
+    <h1 class="large-title" id="large-title">Events</h1>
+    <p class="page-sub" id="page-sub"></p>
+  </div>
+  <div class="toolbar" id="toolbar"></div>
+  <div id="view"></div>
+  <footer class="foot" id="foot"></footer>
+</main>
+
+<nav class="tabbar" id="tabbar" aria-label="View">
+  <button class="tab" data-view="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>
+    Events
+  </button>
+  <button class="tab" data-view="month">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h3M13 14h3M8 17h3" stroke-width="2"/></svg>
+    Month
+  </button>
+  <button class="tab" data-view="year">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
+    Year
+  </button>
+  <button class="tab" data-view="series">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg>
+    Series
+  </button>
+</nav>
+
+<div class="backdrop" id="backdrop">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Event details"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+// ============================================================
+// Settings you can change
+// ============================================================
+const CONFIG = {
+  // Paste the "Publish to web" CSV link of your Google Sheet here to make the
+  // site load its events from the sheet on every visit. Leave empty to use the
+  // dates built into this file.
+  DATA_URL: '',
+  // Link opened by the + button: the editable Google Sheet (or a Google Form).
+  // Leave empty to hide the button.
+  ADD_EVENT_URL: '',
+  // While the site is open, check the sheet for changes this often.
+  REFRESH_MINUTES: 10,
+};
+
+// ============================================================
+// Championships (add a line here for a new series)
+// ============================================================
+const CHAMPIONSHIPS = {
+  F1:      { name: 'Formula 1',                                  short: 'F1',             colour: '#FFE600', on: '#000000' },
+  F2:      { name: 'Formula 2',                                  short: 'F2',             colour: '#0090D0', on: '#FFFFFF' },
+  F3:      { name: 'Formula 3',                                  short: 'F3',             colour: '#E10600', on: '#FFFFFF' },
+  WRC:     { name: 'World Rally Championship',                   short: 'WRC',            colour: '#8B0000', on: '#FFFFFF' },
+  ERC:     { name: 'European Rally Championship',                short: 'ERC',            colour: '#00897B', on: '#FFFFFF' },
+  EHRC:    { name: 'European Historic Rally Championship',       short: 'EHRC',           colour: '#5D4037', on: '#FFFFFF' },
+  BRC:     { name: 'British Rally Championship',                 short: 'BRC',            colour: '#B19CD9', on: '#000000' },
+  BHRC:    { name: 'British Historic Rally Championship',        short: 'BHRC',           colour: '#FFB347', on: '#000000' },
+  WelshRC: { name: 'Pirelli Welsh Rally Championship',           short: 'Welsh',          colour: '#228B22', on: '#FFFFFF' },
+  ScotRC:  { name: 'Scottish Rally Championship',                short: 'Scottish',       colour: '#5DADE2', on: '#000000' },
+  ITRC:    { name: 'Irish Tarmac Rally Championship',            short: 'Irish Tarmac',   colour: '#00A86B', on: '#FFFFFF' },
+  IFRC:    { name: 'Irish Forest Rally Championship',            short: 'Irish Forest',   colour: '#FFD700', on: '#000000' },
+  INRC:    { name: 'Irish National Rally Championship',          short: 'Irish National', colour: '#FFB6C1', on: '#000000' },
+  BTRDA:   { name: 'Protyre Autocare BTRDA Rally Series',        short: 'BTRDA',          colour: '#FF6F00', on: '#000000' },
+  Asphalt: { name: 'Protyre MUK Asphalt Rally Championship',     short: 'Asphalt',        colour: '#4B0082', on: '#FFFFFF' },
+  EngRC:   { name: 'Kingfisher MSUK English Rally Championship', short: 'English',        colour: '#FF1493', on: '#FFFFFF' },
+};
+const CAT_ORDER = Object.keys(CHAMPIONSHIPS);
+
+// Built-in dates, used when no sheet is set up or the sheet can't be reached.
+const BUILT_IN = [{"catCode":"WRC","label":"WRC Monte Carlo","startDate":"2026-01-22","endDate":"2026-01-25","status":"confirmed"},{"catCode":"F1","label":"F1 Test Barcelona","startDate":"2026-01-26","endDate":"2026-01-30","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R1 Galway","startDate":"2026-01-31","endDate":"2026-02-01","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R1 Riponian","startDate":"2026-02-07","endDate":"2026-02-08","status":"confirmed"},{"catCode":"F3","label":"F3 Test Barcelona","startDate":"2026-02-10","endDate":"2026-02-12","status":"confirmed"},{"catCode":"F1","label":"F1 Test 1 Bahrain","startDate":"2026-02-11","endDate":"2026-02-13","status":"confirmed"},{"catCode":"WRC","label":"WRC Sweden","startDate":"2026-02-12","endDate":"2026-02-15","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R1 Snowman","startDate":"2026-02-14","endDate":"2026-02-14","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R1 Yeats Ridge","startDate":"2026-02-15","endDate":"2026-02-15","status":"confirmed"},{"catCode":"F2","label":"F2 Test Barcelona","startDate":"2026-02-17","endDate":"2026-02-19","status":"confirmed"},{"catCode":"F1","label":"F1 Test 2 Bahrain","startDate":"2026-02-18","endDate":"2026-02-20","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R1 East Riding","startDate":"2026-02-21","endDate":"2026-02-22","status":"confirmed"},{"catCode":"INRC","label":"INRC R1 Mayo","startDate":"2026-03-01","endDate":"2026-03-01","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Costa Brava","startDate":"2026-03-06","endDate":"2026-03-07","status":"confirmed"},{"catCode":"F1","label":"F1 R1 Australia","startDate":"2026-03-06","endDate":"2026-03-08","status":"confirmed"},{"catCode":"F2","label":"F2 R1 Melbourne","startDate":"2026-03-06","endDate":"2026-03-08","status":"confirmed"},{"catCode":"F3","label":"F3 R1 Melbourne","startDate":"2026-03-06","endDate":"2026-03-08","status":"confirmed"},{"catCode":"WRC","label":"WRC Kenya","startDate":"2026-03-12","endDate":"2026-03-15","status":"confirmed"},{"catCode":"F1","label":"F1 R2 China","startDate":"2026-03-13","endDate":"2026-03-15","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R2 West Cork","startDate":"2026-03-13","endDate":"2026-03-15","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R2 Border Counties","startDate":"2026-03-14","endDate":"2026-03-14","status":"confirmed"},{"catCode":"F1","label":"F1 R3 Japan","startDate":"2026-03-27","endDate":"2026-03-29","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R2 N Wales","startDate":"2026-03-28","endDate":"2026-03-28","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R1 Rally N Wales","startDate":"2026-03-28","endDate":"2026-03-28","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R1 Rally N Wales","startDate":"2026-03-28","endDate":"2026-03-28","status":"confirmed"},{"catCode":"INRC","label":"INRC R2 Birr","startDate":"2026-03-29","endDate":"2026-03-29","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R3 Circuit of Ireland","startDate":"2026-04-03","endDate":"2026-04-04","status":"confirmed"},{"catCode":"WRC","label":"WRC Croatia","startDate":"2026-04-09","endDate":"2026-04-12","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Historic Fafe (Gravel)","startDate":"2026-04-10","endDate":"2026-04-11","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R3 Severn Valley","startDate":"2026-04-11","endDate":"2026-04-11","status":"confirmed"},{"catCode":"BRC","label":"BRC R1 Severn Valley","startDate":"2026-04-11","endDate":"2026-04-11","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R2 Severn Valley","startDate":"2026-04-11","endDate":"2026-04-11","status":"confirmed"},{"catCode":"INRC","label":"INRC R3 Monaghan","startDate":"2026-04-12","endDate":"2026-04-12","status":"confirmed"},{"catCode":"ERC","label":"ERC R1 Andalusia Córdoba","startDate":"2026-04-17","endDate":"2026-04-19","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R2 Kielder Forest","startDate":"2026-04-18","endDate":"2026-04-18","status":"confirmed"},{"catCode":"EngRC","label":"EngRC R1 Kielder Forest","startDate":"2026-04-18","endDate":"2026-04-18","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R2 Moonraker","startDate":"2026-04-18","endDate":"2026-04-18","status":"confirmed"},{"catCode":"WRC","label":"WRC Canarias","startDate":"2026-04-23","endDate":"2026-04-26","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Costa Smeralda","startDate":"2026-04-24","endDate":"2026-04-25","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Historic Vltava","startDate":"2026-04-24","endDate":"2026-04-26","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R3 Speyside","startDate":"2026-04-25","endDate":"2026-04-25","status":"confirmed"},{"catCode":"F1","label":"F1 R4 Miami","startDate":"2026-05-01","endDate":"2026-05-03","status":"confirmed"},{"catCode":"F2","label":"F2 R2 Miami","startDate":"2026-05-01","endDate":"2026-05-03","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R4 Lakes","startDate":"2026-05-02","endDate":"2026-05-03","status":"confirmed"},{"catCode":"WRC","label":"WRC Portugal","startDate":"2026-05-07","endDate":"2026-05-10","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R2 Manx National","startDate":"2026-05-08","endDate":"2026-05-09","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R4 Manx","startDate":"2026-05-08","endDate":"2026-05-09","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Antibes Côte d'Azur","startDate":"2026-05-14","endDate":"2026-05-17","status":"confirmed"},{"catCode":"INRC","label":"INRC R4 Carlow","startDate":"2026-05-17","endDate":"2026-05-17","status":"confirmed"},{"catCode":"F3","label":"F3 Test Spielberg","startDate":"2026-05-20","endDate":"2026-05-21","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R3 Jim Clark","startDate":"2026-05-22","endDate":"2026-05-23","status":"confirmed"},{"catCode":"BRC","label":"BRC R2 Jim Clark","startDate":"2026-05-22","endDate":"2026-05-23","status":"confirmed"},{"catCode":"ERC","label":"ERC R2 Royal Rally of Scandinavia","startDate":"2026-05-22","endDate":"2026-05-24","status":"confirmed"},{"catCode":"F1","label":"F1 R5 Canada","startDate":"2026-05-22","endDate":"2026-05-24","status":"confirmed"},{"catCode":"F2","label":"F2 R3 Canada","startDate":"2026-05-22","endDate":"2026-05-24","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Historic Acropolis (Gravel)","startDate":"2026-05-23","endDate":"2026-05-24","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R4 Jim Clark Reivers","startDate":"2026-05-24","endDate":"2026-05-24","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Rallye du Chablais","startDate":"2026-05-28","endDate":"2026-05-30","status":"confirmed"},{"catCode":"WRC","label":"WRC Japan","startDate":"2026-05-28","endDate":"2026-05-31","status":"confirmed"},{"catCode":"INRC","label":"INRC R5 Munster","startDate":"2026-05-31","endDate":"2026-05-31","status":"confirmed"},{"catCode":"F2","label":"F2 R4 Monaco","startDate":"2026-06-04","endDate":"2026-06-07","status":"confirmed"},{"catCode":"F3","label":"F3 R2 Monaco","startDate":"2026-06-04","endDate":"2026-06-07","status":"confirmed"},{"catCode":"F1","label":"F1 R6 Monaco","startDate":"2026-06-05","endDate":"2026-06-07","status":"confirmed"},{"catCode":"F1","label":"F1 R7 Barcelona","startDate":"2026-06-12","endDate":"2026-06-14","status":"confirmed"},{"catCode":"F2","label":"F2 R5 Barcelona","startDate":"2026-06-12","endDate":"2026-06-14","status":"confirmed"},{"catCode":"F3","label":"F3 R3 Barcelona","startDate":"2026-06-12","endDate":"2026-06-14","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R3 Plains","startDate":"2026-06-13","endDate":"2026-06-13","status":"confirmed"},{"catCode":"EngRC","label":"EngRC R2 Plains","startDate":"2026-06-13","endDate":"2026-06-13","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R3 Plains","startDate":"2026-06-13","endDate":"2026-06-13","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R4 Argyll","startDate":"2026-06-19","endDate":"2026-06-20","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R6 Argyll","startDate":"2026-06-19","endDate":"2026-06-20","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R5 Donegal","startDate":"2026-06-19","endDate":"2026-06-21","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R5 Argyll","startDate":"2026-06-20","endDate":"2026-06-20","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Ardeca Ypres Historic","startDate":"2026-06-25","endDate":"2026-06-27","status":"confirmed"},{"catCode":"WRC","label":"WRC Greece","startDate":"2026-06-25","endDate":"2026-06-28","status":"confirmed"},{"catCode":"F1","label":"F1 R8 Austria","startDate":"2026-06-26","endDate":"2026-06-28","status":"confirmed"},{"catCode":"F2","label":"F2 R6 Spielberg","startDate":"2026-06-26","endDate":"2026-06-28","status":"confirmed"},{"catCode":"F3","label":"F3 R4 Spielberg","startDate":"2026-06-26","endDate":"2026-06-28","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R3 Carrick","startDate":"2026-06-27","endDate":"2026-06-28","status":"confirmed"},{"catCode":"ERC","label":"ERC R3 Rally di Roma Capitale","startDate":"2026-07-03","endDate":"2026-07-05","status":"confirmed"},{"catCode":"F1","label":"F1 R9 Silverstone","startDate":"2026-07-03","endDate":"2026-07-05","status":"confirmed"},{"catCode":"F2","label":"F2 R7 Silverstone","startDate":"2026-07-03","endDate":"2026-07-05","status":"confirmed"},{"catCode":"F3","label":"F3 R5 Silverstone","startDate":"2026-07-03","endDate":"2026-07-05","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R4 Nicky Grist","startDate":"2026-07-11","endDate":"2026-07-11","status":"confirmed"},{"catCode":"EngRC","label":"EngRC R3 Nicky Grist","startDate":"2026-07-11","endDate":"2026-07-11","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R4 Nicky Grist","startDate":"2026-07-11","endDate":"2026-07-11","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Rally Weiz Historic","startDate":"2026-07-16","endDate":"2026-07-18","status":"confirmed"},{"catCode":"WRC","label":"WRC Estonia","startDate":"2026-07-16","endDate":"2026-07-19","status":"confirmed"},{"catCode":"F1","label":"F1 R10 Spa","startDate":"2026-07-17","endDate":"2026-07-19","status":"confirmed"},{"catCode":"F2","label":"F2 R8 Spa","startDate":"2026-07-17","endDate":"2026-07-19","status":"confirmed"},{"catCode":"F3","label":"F3 R6 Spa","startDate":"2026-07-17","endDate":"2026-07-19","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R6 RSAC","startDate":"2026-07-18","endDate":"2026-07-18","status":"confirmed"},{"catCode":"INRC","label":"INRC R6 Stonethrowers","startDate":"2026-07-19","endDate":"2026-07-19","status":"confirmed"},{"catCode":"ERC","label":"ERC R4 Rally Poland (Silesia)","startDate":"2026-07-24","endDate":"2026-07-26","status":"confirmed"},{"catCode":"F1","label":"F1 R11 Hungary","startDate":"2026-07-24","endDate":"2026-07-26","status":"confirmed"},{"catCode":"F2","label":"F2 R9 Budapest","startDate":"2026-07-24","endDate":"2026-07-26","status":"confirmed"},{"catCode":"F3","label":"F3 R7 Budapest","startDate":"2026-07-24","endDate":"2026-07-26","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R5 Tour of Epynt","startDate":"2026-07-25","endDate":"2026-07-26","status":"confirmed"},{"catCode":"WRC","label":"WRC Finland","startDate":"2026-07-30","endDate":"2026-08-02","status":"confirmed"},{"catCode":"BRC","label":"BRC R4 Grampian","startDate":"2026-08-07","endDate":"2026-08-08","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Ulster International","startDate":"2026-08-07","endDate":"2026-08-09","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R6 Ulster","startDate":"2026-08-07","endDate":"2026-08-08","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish R7 Grampian","startDate":"2026-08-07","endDate":"2026-08-08","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R4 Cork Forest","startDate":"2026-08-09","endDate":"2026-08-09","status":"confirmed"},{"catCode":"ERC","label":"ERC R5 Barum Czech Rally Zlín","startDate":"2026-08-14","endDate":"2026-08-16","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Lahti Historic (Gravel)","startDate":"2026-08-20","endDate":"2026-08-22","status":"confirmed"},{"catCode":"F1","label":"F1 R12 Netherlands","startDate":"2026-08-21","endDate":"2026-08-23","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R6 Down Rally","startDate":"2026-08-22","endDate":"2026-08-22","status":"confirmed"},{"catCode":"INRC","label":"INRC R7 Galway Summer","startDate":"2026-08-23","endDate":"2026-08-23","status":"confirmed"},{"catCode":"WRC","label":"WRC Paraguay","startDate":"2026-08-27","endDate":"2026-08-30","status":"confirmed"},{"catCode":"EHRC","label":"EHRC East Sweden Historic (Gravel)","startDate":"2026-08-28","endDate":"2026-08-29","status":"confirmed"},{"catCode":"BRC","label":"BRC R5 Rali Ceredigion","startDate":"2026-09-04","endDate":"2026-09-06","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Rali Ceredigion","startDate":"2026-09-04","endDate":"2026-09-06","status":"confirmed"},{"catCode":"ERC","label":"ERC R6 Rali Ceredigion","startDate":"2026-09-04","endDate":"2026-09-06","status":"confirmed"},{"catCode":"F1","label":"F1 R13 Monza","startDate":"2026-09-04","endDate":"2026-09-06","status":"confirmed"},{"catCode":"F2","label":"F2 R10 Monza","startDate":"2026-09-04","endDate":"2026-09-06","status":"confirmed"},{"catCode":"F3","label":"F3 R8 Monza","startDate":"2026-09-04","endDate":"2026-09-06","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R5 Lakeland","startDate":"2026-09-05","endDate":"2026-09-05","status":"confirmed"},{"catCode":"WRC","label":"WRC Chile","startDate":"2026-09-10","endDate":"2026-09-13","status":"confirmed"},{"catCode":"F1","label":"F1 R14 Madrid","startDate":"2026-09-11","endDate":"2026-09-13","status":"confirmed"},{"catCode":"F2","label":"F2 R11 Madrid","startDate":"2026-09-11","endDate":"2026-09-13","status":"confirmed"},{"catCode":"F3","label":"F3 R9 Madrid","startDate":"2026-09-11","endDate":"2026-09-13","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R5 Woodpecker","startDate":"2026-09-12","endDate":"2026-09-12","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R7 Hills Ford","startDate":"2026-09-19","endDate":"2026-09-20","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R6 Bushwhacker","startDate":"2026-09-19","endDate":"2026-09-19","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Rally Elba Storico","startDate":"2026-09-24","endDate":"2026-09-26","status":"confirmed"},{"catCode":"F2","label":"F2 R12 Baku","startDate":"2026-09-24","endDate":"2026-09-26","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R7 Trackrod","startDate":"2026-09-25","endDate":"2026-09-26","status":"confirmed"},{"catCode":"F1","label":"F1 R15 Azerbaijan","startDate":"2026-09-25","endDate":"2026-09-27","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R5 Trackrod","startDate":"2026-09-26","endDate":"2026-09-26","status":"confirmed"},{"catCode":"EngRC","label":"EngRC R4 Trackrod","startDate":"2026-09-26","endDate":"2026-09-26","status":"confirmed"},{"catCode":"ITRC","label":"ITRC R7 Cork 20","startDate":"2026-09-26","endDate":"2026-09-27","status":"confirmed"},{"catCode":"WRC","label":"WRC Italy Sardegna","startDate":"2026-10-01","endDate":"2026-10-04","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R7 Laois","startDate":"2026-10-04","endDate":"2026-10-04","status":"confirmed"},{"catCode":"F1","label":"F1 R16 Singapore","startDate":"2026-10-09","endDate":"2026-10-11","status":"confirmed"},{"catCode":"INRC","label":"INRC R8 Donegal Harvest","startDate":"2026-10-10","endDate":"2026-10-10","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Sanremo Storico","startDate":"2026-10-16","endDate":"2026-10-17","status":"confirmed"},{"catCode":"IFRC","label":"IFRC R8 Dogleap","startDate":"2026-10-17","endDate":"2026-10-17","status":"confirmed"},{"catCode":"ERC","label":"ERC R7 Five Cities North of Portugal","startDate":"2026-10-23","endDate":"2026-10-25","status":"confirmed"},{"catCode":"F1","label":"F1 R17 USA","startDate":"2026-10-23","endDate":"2026-10-25","status":"confirmed"},{"catCode":"BRC","label":"BRC R6 Cambrian","startDate":"2026-10-24","endDate":"2026-10-24","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R6 Cambrian","startDate":"2026-10-24","endDate":"2026-10-24","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R6 Cambrian","startDate":"2026-10-24","endDate":"2026-10-24","status":"confirmed"},{"catCode":"F1","label":"F1 R18 Mexico","startDate":"2026-10-30","endDate":"2026-11-01","status":"confirmed"},{"catCode":"F1","label":"F1 R19 Brazil","startDate":"2026-11-06","endDate":"2026-11-08","status":"confirmed"},{"catCode":"EngRC","label":"EngRC R5 Wyedean","startDate":"2026-11-14","endDate":"2026-11-14","status":"confirmed"},{"catCode":"WelshRC","label":"Welsh R7 Wyedean","startDate":"2026-11-14","endDate":"2026-11-14","status":"confirmed"},{"catCode":"F1","label":"F1 R20 Las Vegas","startDate":"2026-11-19","endDate":"2026-11-21","status":"confirmed"},{"catCode":"BHRC","label":"BHRC R8 Anglo Caledonian","startDate":"2026-11-20","endDate":"2026-11-21","status":"confirmed"},{"catCode":"EHRC","label":"EHRC Rally del Brunello (Gravel)","startDate":"2026-11-27","endDate":"2026-11-28","status":"confirmed"},{"catCode":"F1","label":"F1 R21 Qatar","startDate":"2026-11-27","endDate":"2026-11-29","status":"confirmed"},{"catCode":"F2","label":"F2 R13 Qatar","startDate":"2026-11-27","endDate":"2026-11-29","status":"confirmed"},{"catCode":"ITRC","label":"ITRC Killarney Historic (2027 opener)","startDate":"2026-11-29","endDate":"2026-11-29","status":"provisional","note":"Irish Tarmac Historic category. Reported as the 2027 season opener."},{"catCode":"F1","label":"F1 R22 Abu Dhabi","startDate":"2026-12-04","endDate":"2026-12-06","status":"confirmed"},{"catCode":"F2","label":"F2 R14 Abu Dhabi","startDate":"2026-12-04","endDate":"2026-12-06","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA R7 Grizedale","startDate":"2026-12-05","endDate":"2026-12-05","status":"confirmed"},{"catCode":"EngRC","label":"EngRC R6 Grizedale","startDate":"2026-12-05","endDate":"2026-12-05","status":"confirmed"},{"catCode":"WRC","label":"WRC Monte Carlo","startDate":"2027-01-21","endDate":"2027-01-24","status":"confirmed"},{"catCode":"ScotRC","label":"Scottish Snowman","startDate":"2027-02-06","endDate":"2027-02-06","status":"confirmed","note":"Confirmed as the 2027 Scottish Championship opener."},{"catCode":"Asphalt","label":"Asphalt R1 East Riding","startDate":"2027-02-13","endDate":"2027-02-14","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026)."},{"catCode":"F2","label":"F2 Test Bahrain","startDate":"2027-02-15","endDate":"2027-02-17","status":"confirmed"},{"catCode":"F3","label":"F3 Test Bahrain","startDate":"2027-02-15","endDate":"2027-02-17","status":"confirmed"},{"catCode":"WRC","label":"WRC Sweden","startDate":"2027-02-18","endDate":"2027-02-21","status":"confirmed"},{"catCode":"F1","label":"F1 Test Bahrain","startDate":"2027-02-24","endDate":"2027-02-27","status":"confirmed"},{"catCode":"BHRC","label":"BHRC Riponian","startDate":"2027-02-28","endDate":"2027-02-28","status":"provisional"},{"catCode":"F1","label":"F1 R1 Bahrain","startDate":"2027-03-12","endDate":"2027-03-14","status":"confirmed"},{"catCode":"F2","label":"F2 R1 Bahrain","startDate":"2027-03-12","endDate":"2027-03-14","status":"confirmed"},{"catCode":"F3","label":"F3 R1 Bahrain","startDate":"2027-03-12","endDate":"2027-03-14","status":"confirmed"},{"catCode":"WRC","label":"WRC Kenya","startDate":"2027-03-18","endDate":"2027-03-21","status":"confirmed"},{"catCode":"F1","label":"F1 R2 Saudi Arabia","startDate":"2027-03-19","endDate":"2027-03-21","status":"confirmed"},{"catCode":"F2","label":"F2 R2 Jeddah","startDate":"2027-03-19","endDate":"2027-03-21","status":"confirmed"},{"catCode":"F3","label":"F3 R2 Jeddah","startDate":"2027-03-19","endDate":"2027-03-21","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R2 North West Stages","startDate":"2027-03-20","endDate":"2027-03-20","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026). Ceremonial start in Garstang on Fri 19 March."},{"catCode":"BRC","label":"BRC North West Stages","startDate":"2027-03-20","endDate":"2027-03-20","status":"provisional","note":"Date confirmed by the organisers (rally Sat 20 March, ceremonial start Fri 19 March). British Rally Championship inclusion not yet confirmed."},{"catCode":"BHRC","label":"BHRC Rally N Wales","startDate":"2027-03-21","endDate":"2027-03-21","status":"provisional"},{"catCode":"WelshRC","label":"Welsh Rally N Wales","startDate":"2027-03-21","endDate":"2027-03-21","status":"provisional"},{"catCode":"F1","label":"F1 R3 Australia","startDate":"2027-04-02","endDate":"2027-04-04","status":"confirmed"},{"catCode":"F2","label":"F2 R3 Melbourne","startDate":"2027-04-02","endDate":"2027-04-04","status":"confirmed"},{"catCode":"F3","label":"F3 R3 Melbourne","startDate":"2027-04-02","endDate":"2027-04-04","status":"confirmed"},{"catCode":"WRC","label":"WRC Croatia","startDate":"2027-04-08","endDate":"2027-04-11","status":"confirmed"},{"catCode":"F1","label":"F1 R4 Japan","startDate":"2027-04-09","endDate":"2027-04-11","status":"confirmed"},{"catCode":"BHRC","label":"BHRC Severn Valley","startDate":"2027-04-10","endDate":"2027-04-10","status":"provisional"},{"catCode":"BRC","label":"BRC Severn Valley","startDate":"2027-04-10","endDate":"2027-04-10","status":"provisional"},{"catCode":"WelshRC","label":"Welsh Severn Valley","startDate":"2027-04-10","endDate":"2027-04-10","status":"provisional"},{"catCode":"F1","label":"F1 R5 China","startDate":"2027-04-16","endDate":"2027-04-18","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R3 Manx National","startDate":"2027-04-22","endDate":"2027-04-24","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026)."},{"catCode":"BHRC","label":"BHRC Manx National","startDate":"2027-04-22","endDate":"2027-04-24","status":"provisional"},{"catCode":"F1","label":"F1 R6 Miami","startDate":"2027-04-28","endDate":"2027-04-30","status":"confirmed"},{"catCode":"WRC","label":"WRC Canarias","startDate":"2027-05-06","endDate":"2027-05-09","status":"confirmed"},{"catCode":"F2","label":"F2 R4 Montreal","startDate":"2027-05-20","endDate":"2027-05-23","status":"confirmed"},{"catCode":"F3","label":"F3 R4 Montreal","startDate":"2027-05-20","endDate":"2027-05-23","status":"confirmed"},{"catCode":"F1","label":"F1 R7 Canada","startDate":"2027-05-21","endDate":"2027-05-23","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R4 Jim Clark","startDate":"2027-05-28","endDate":"2027-05-29","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026)."},{"catCode":"BRC","label":"BRC Jim Clark","startDate":"2027-05-28","endDate":"2027-05-29","status":"provisional"},{"catCode":"ScotRC","label":"Scottish Jim Clark Reivers","startDate":"2027-05-30","endDate":"2027-05-30","status":"provisional"},{"catCode":"F2","label":"F2 R5 Monaco","startDate":"2027-06-03","endDate":"2027-06-06","status":"confirmed"},{"catCode":"F3","label":"F3 R5 Monaco","startDate":"2027-06-03","endDate":"2027-06-06","status":"confirmed"},{"catCode":"WRC","label":"WRC Japan","startDate":"2027-06-03","endDate":"2027-06-06","status":"confirmed"},{"catCode":"F1","label":"F1 R8 Monaco","startDate":"2027-06-04","endDate":"2027-06-06","status":"confirmed"},{"catCode":"F1","label":"F1 R9 Portugal","startDate":"2027-06-18","endDate":"2027-06-20","status":"confirmed"},{"catCode":"F2","label":"F2 Test Barcelona","startDate":"2027-06-21","endDate":"2027-06-22","status":"confirmed"},{"catCode":"F3","label":"F3 Test Barcelona","startDate":"2027-06-23","endDate":"2027-06-25","status":"confirmed"},{"catCode":"WRC","label":"WRC Greece","startDate":"2027-06-24","endDate":"2027-06-27","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R5 Argyll","startDate":"2027-06-25","endDate":"2027-06-26","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026)."},{"catCode":"F1","label":"F1 R10 Silverstone","startDate":"2027-07-02","endDate":"2027-07-04","status":"confirmed"},{"catCode":"F2","label":"F2 R6 Silverstone","startDate":"2027-07-02","endDate":"2027-07-04","status":"confirmed"},{"catCode":"F3","label":"F3 R6 Silverstone","startDate":"2027-07-02","endDate":"2027-07-04","status":"confirmed"},{"catCode":"WRC","label":"WRC Italy Rome","startDate":"2027-07-08","endDate":"2027-07-11","status":"confirmed"},{"catCode":"F1","label":"F1 R11 Austria","startDate":"2027-07-09","endDate":"2027-07-11","status":"confirmed"},{"catCode":"F2","label":"F2 R7 Spielberg","startDate":"2027-07-09","endDate":"2027-07-11","status":"confirmed"},{"catCode":"F3","label":"F3 R7 Spielberg","startDate":"2027-07-09","endDate":"2027-07-11","status":"confirmed"},{"catCode":"BTRDA","label":"BTRDA Nicky Grist","startDate":"2027-07-10","endDate":"2027-07-10","status":"provisional"},{"catCode":"EngRC","label":"EngRC Nicky Grist","startDate":"2027-07-10","endDate":"2027-07-10","status":"provisional"},{"catCode":"WelshRC","label":"Welsh Nicky Grist","startDate":"2027-07-10","endDate":"2027-07-10","status":"provisional"},{"catCode":"ScotRC","label":"Scottish RSAC","startDate":"2027-07-17","endDate":"2027-07-17","status":"provisional","note":"Provisional event date."},{"catCode":"WRC","label":"WRC Estonia","startDate":"2027-07-22","endDate":"2027-07-25","status":"confirmed"},{"catCode":"F1","label":"F1 R12 Spa","startDate":"2027-07-23","endDate":"2027-07-25","status":"confirmed"},{"catCode":"F1","label":"F1 R13 Hungary","startDate":"2027-07-28","endDate":"2027-07-30","status":"confirmed"},{"catCode":"WRC","label":"WRC Finland","startDate":"2027-07-29","endDate":"2027-08-01","status":"confirmed"},{"catCode":"WRC","label":"WRC USA","startDate":"2027-08-26","endDate":"2027-08-29","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R6 Mewla Rally","startDate":"2027-08-29","endDate":"2027-08-29","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026)."},{"catCode":"F1","label":"F1 R14 Monza","startDate":"2027-09-03","endDate":"2027-09-05","status":"confirmed"},{"catCode":"F2","label":"F2 R8 Monza","startDate":"2027-09-03","endDate":"2027-09-05","status":"confirmed"},{"catCode":"F3","label":"F3 R8 Monza","startDate":"2027-09-03","endDate":"2027-09-05","status":"confirmed"},{"catCode":"F1","label":"F1 R15 Madrid","startDate":"2027-09-10","endDate":"2027-09-12","status":"confirmed"},{"catCode":"F2","label":"F2 R9 Madrid","startDate":"2027-09-10","endDate":"2027-09-12","status":"confirmed"},{"catCode":"F3","label":"F3 R9 Madrid","startDate":"2027-09-10","endDate":"2027-09-12","status":"confirmed"},{"catCode":"Asphalt","label":"Asphalt R7 Hills Ford","startDate":"2027-09-18","endDate":"2027-09-19","status":"confirmed","note":"Confirmed on the 2027 Protyre Asphalt calendar (asphaltrallying.com, 8 Nov 2026)."},{"catCode":"F1","label":"F1 R16 Azerbaijan","startDate":"2027-09-24","endDate":"2027-09-26","status":"confirmed"},{"catCode":"F2","label":"F2 R10 Baku","startDate":"2027-09-24","endDate":"2027-09-26","status":"confirmed"},{"catCode":"WRC","label":"WRC Scotland","startDate":"2027-09-30","endDate":"2027-10-03","status":"confirmed"},{"catCode":"F1","label":"F1 R17 Turkey","startDate":"2027-10-01","endDate":"2027-10-03","status":"confirmed"},{"catCode":"F2","label":"F2 R11 Istanbul","startDate":"2027-10-01","endDate":"2027-10-03","status":"confirmed"},{"catCode":"F3","label":"F3 R10 Istanbul","startDate":"2027-10-01","endDate":"2027-10-03","status":"confirmed"},{"catCode":"F1","label":"F1 R18 Singapore","startDate":"2027-10-08","endDate":"2027-10-10","status":"confirmed"},{"catCode":"WRC","label":"WRC Paraguay","startDate":"2027-10-21","endDate":"2027-10-24","status":"confirmed"},{"catCode":"F1","label":"F1 R19 USA","startDate":"2027-10-22","endDate":"2027-10-24","status":"confirmed"},{"catCode":"F1","label":"F1 R20 Mexico","startDate":"2027-10-29","endDate":"2027-10-31","status":"confirmed"},{"catCode":"F2","label":"F2 R12 Mexico City","startDate":"2027-10-29","endDate":"2027-10-31","status":"confirmed"},{"catCode":"WRC","label":"WRC Chile","startDate":"2027-11-04","endDate":"2027-11-07","status":"confirmed"},{"catCode":"F1","label":"F1 R21 Brazil","startDate":"2027-11-05","endDate":"2027-11-07","status":"confirmed"},{"catCode":"F1","label":"F1 R22 Las Vegas","startDate":"2027-11-18","endDate":"2027-11-20","status":"confirmed"},{"catCode":"WRC","label":"WRC Saudi Arabia","startDate":"2027-11-25","endDate":"2027-11-28","status":"confirmed"},{"catCode":"F1","label":"F1 R23 Qatar","startDate":"2027-12-03","endDate":"2027-12-05","status":"confirmed"},{"catCode":"F2","label":"F2 R13 Qatar","startDate":"2027-12-03","endDate":"2027-12-05","status":"confirmed"},{"catCode":"F1","label":"F1 R24 Abu Dhabi","startDate":"2027-12-10","endDate":"2027-12-12","status":"confirmed"},{"catCode":"F2","label":"F2 R14 Abu Dhabi","startDate":"2027-12-10","endDate":"2027-12-12","status":"confirmed"}];
+
+// ============================================================
+// Storage (wrapped: private browsing can refuse it)
+// ============================================================
+const PREFS_KEY = 'msc-prefs-v2';
+const CACHE_KEY = 'msc-sheet-cache-v1';
+function storeGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function storeSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+const P = Object.assign({ view: 'list', year: null, month: null, hidden: [], search: '', listMode: 'upcoming' }, storeGet(PREFS_KEY) || {});
+P.hidden = (P.hidden || []).filter(c => CHAMPIONSHIPS[c]);
+function savePrefs() { storeSet(PREFS_KEY, P); }
+
+const S = { events: [], source: 'built-in', updatedAt: null, skipped: 0, lastFetch: 0 };
+const wideMQ = window.matchMedia('(min-width: 760px)');
+
+// ============================================================
+// Helpers
+// ============================================================
+const $ = s => document.querySelector(s);
+function h(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') n.className = v;
+    else if (k === 'style') { for (const [sk, sv] of Object.entries(v)) { if (sk.startsWith('--')) n.style.setProperty(sk, sv); else n.style[sk] = sv; } }
+    else if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), v);
+    else if (k === 'html') n.innerHTML = v;
+    else n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) { if (c == null || c === false) continue; n.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return n;
+}
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const todayISO = () => iso(new Date());
+const dayDiff = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const dim = (y, m) => new Date(y, m + 1, 0).getDate();
+const mondayIndex = d => (d.getDay() + 6) % 7;
+
+function fmtRange(a, b) {
+  const s = parse(a), e = parse(b);
+  if (a === b) return `${s.getDate()} ${MON[s.getMonth()]}`;
+  if (s.getMonth() === e.getMonth()) return `${s.getDate()}–${e.getDate()} ${MON[s.getMonth()]}`;
+  return `${s.getDate()} ${MON[s.getMonth()]} – ${e.getDate()} ${MON[e.getMonth()]}`;
+}
+function fmtLong(s) { const d = parse(s); return `${DOW[mondayIndex(d)]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
+function days(e) { return dayDiff(e.startDate, e.endDate) + 1; }
+function rel(e) {
+  const t = todayISO();
+  if (e.startDate <= t && t <= e.endDate) return { text: 'On now', live: true };
+  if (e.endDate < t) return { text: 'Finished', past: true };
+  const d = dayDiff(t, e.startDate);
+  if (d === 1) return { text: 'Tomorrow' };
+  if (d < 14) return { text: `In ${d} days` };
+  if (d < 63) return { text: `In ${Math.round(d / 7)} weeks` };
+  const mo = Math.round(d / 30.4);
+  return { text: mo === 1 ? 'In a month' : `In ${mo} months` };
+}
+const SERIES_PREFIX = /^(F1|F2|F3|WRC|ERC|EHRC|BRC|BHRC|Welsh|Scottish|ITRC|IFRC|INRC|BTRDA|Asphalt|EngRC)\s+/i;
+const CODE = c => ({ WelshRC: 'WEL', ScotRC: 'SCO', Asphalt: 'ASP', EngRC: 'ENG' })[c] || c;
+const venue = label => label.replace(SERIES_PREFIX, '').replace(/^(R\d+|Test(\s\d)?)\s+/i, '');
+function fitText(e, px, charPx) {
+  const fits = s => s.length * charPx <= px;
+  if (fits(e.label)) return e.label;
+  const v = venue(e.label);
+  if (fits(v) || v.length * charPx * 0.6 <= px && px > 60) return v;
+  return CODE(e.catCode);
+}
+function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40); }
+
+// ============================================================
+// Data: built-in or a published Google Sheet (CSV)
+// ============================================================
+const CAT_LOOKUP = {};
+for (const [code, c] of Object.entries(CHAMPIONSHIPS)) {
+  CAT_LOOKUP[code.toLowerCase()] = code;
+  CAT_LOOKUP[c.short.toLowerCase()] = code;
+  CAT_LOOKUP[c.name.toLowerCase()] = code;
+}
+function normDate(v) {
+  v = String(v || '').trim();
+  let m;
+  if ((m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  if ((m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) return `${m[3]}-${pad(m[2])}-${pad(m[1])}`; // UK day/month/year
+  if ((m = v.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})$/))) {
+    const mi = MON.findIndex(x => m[2].toLowerCase().startsWith(x.toLowerCase()));
+    if (mi >= 0) return `${m[3]}-${pad(mi + 1)}-${pad(m[1])}`;
+  }
+  return null;
+}
+function normEvent(r) {
+  const cat = CAT_LOOKUP[String(r.catCode || '').trim().toLowerCase()];
+  const label = String(r.label || '').trim();
+  const start = normDate(r.startDate);
+  let end = normDate(r.endDate) || start;
+  if (!cat || !label || !start) return null;
+  if (end < start) end = start;
+  const status = String(r.status || '').trim().toLowerCase().startsWith('prov') ? 'provisional' : 'confirmed';
+  return { id: `${cat.toLowerCase()}-${start}-${slug(label)}`, catCode: cat, label, startDate: start, endDate: end, status, note: String(r.note || '').trim() };
+}
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+const HEADER_ALIASES = {
+  catcode: 'catCode', championship: 'catCode', series: 'catCode',
+  label: 'label', event: 'label', name: 'label',
+  startdate: 'startDate', start: 'startDate',
+  enddate: 'endDate', end: 'endDate',
+  status: 'status', note: 'note', notes: 'note',
+};
+function eventsFromCSV(text) {
+  const rows = parseCSV(text).filter(r => r.some(x => x.trim() !== ''));
+  if (!rows.length) return { events: [], skipped: 0 };
+  const keys = rows[0].map(x => HEADER_ALIASES[x.trim().toLowerCase().replace(/[^a-z]/g, '')] || null);
+  const events = []; let skipped = 0;
+  for (const r of rows.slice(1)) {
+    const o = {}; keys.forEach((k, i) => { if (k) o[k] = r[i]; });
+    const e = normEvent(o);
+    if (e) events.push(e); else skipped++;
+  }
+  return { events, skipped };
+}
+function setEvents(list, source, updatedAt, skipped) {
+  const seen = new Set();
+  S.events = list.map(normEvent).filter(e => e && !seen.has(e.id) && seen.add(e.id))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate) || CAT_ORDER.indexOf(a.catCode) - CAT_ORDER.indexOf(b.catCode));
+  S.source = source; S.updatedAt = updatedAt; S.skipped = skipped || 0;
+  render();
+}
+async function loadData(opts = {}) {
+  if (!CONFIG.DATA_URL) return;
+  S.lastFetch = Date.now();
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 9000);
+    const res = await fetch(CONFIG.DATA_URL, { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const { events, skipped } = eventsFromCSV(text);
+    if (!events.length) throw new Error('The sheet has no usable rows');
+    storeSet(CACHE_KEY, { at: Date.now(), text });
+    setEvents(events, 'sheet', Date.now(), skipped);
+    if (opts.announce) toast('Calendar updated');
+  } catch (err) {
+    if (S.source === 'sheet') return; // keep what's on screen
+    toast(navigator.onLine ? 'Couldn’t load the sheet. Showing the last saved dates.' : 'You’re offline. Showing the last saved dates.');
+  }
+}
+
+// ============================================================
+// Filtering
+// ============================================================
+function filtered({ search = false } = {}) {
+  const hidden = new Set(P.hidden);
+  const q = search ? P.search.trim().toLowerCase() : '';
+  return S.events.filter(e => !hidden.has(e.catCode) &&
+    (!q || e.label.toLowerCase().includes(q) || CHAMPIONSHIPS[e.catCode].name.toLowerCase().includes(q)));
+}
+const overlaps = (e, a, b) => e.startDate <= b && e.endDate >= a;
+const inYear = (e, y) => overlaps(e, `${y}-01-01`, `${y}-12-31`);
+function years() {
+  const ys = new Set([new Date().getFullYear()]);
+  for (const e of S.events) { ys.add(+e.startDate.slice(0, 4)); ys.add(+e.endDate.slice(0, 4)); }
+  return [...ys].sort();
+}
+function viewMonth() {
+  const now = new Date();
+  if (P.month == null || P.month < 0 || P.month > 11) P.month = P.year === now.getFullYear() ? now.getMonth() : 0;
+  return P.month;
+}
+
+// ============================================================
+// Render
+// ============================================================
+function render() {
+  const ys = years();
+  if (!P.year || !ys.includes(P.year)) P.year = ys.includes(new Date().getFullYear()) ? new Date().getFullYear() : ys[0];
+  renderChrome(ys);
+  renderToolbar();
+  const v = $('#view'); v.replaceChildren();
+  ({ list: viewList, month: viewMonthCal, year: viewYear, series: viewSeries }[P.view] || viewList)(v);
+  renderFoot();
+  savePrefs();
+}
+
+function renderChrome(ys) {
+  const sel = $('#year-select');
+  sel.replaceChildren(...ys.map(y => h('option', { value: y, selected: y === P.year }, y)));
+  document.querySelectorAll('[data-view]').forEach(b => {
+    const on = b.dataset.view === P.view;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const titles = { list: 'Events', month: 'Month', year: String(P.year), series: 'Series' };
+  $('#large-title').textContent = titles[P.view];
+  $('#nav-title').textContent = titles[P.view];
+  const n = filtered().filter(e => inYear(e, P.year)).length;
+  const hiddenN = P.hidden.length;
+  const subs = {
+    list: `${n} ${n === 1 ? 'event' : 'events'} in ${P.year}${hiddenN ? `, ${hiddenN} ${hiddenN === 1 ? 'series' : 'series'} hidden` : ''}`,
+    month: `${MONTHS[viewMonth()]} ${P.year}`,
+    year: `${n} ${n === 1 ? 'event' : 'events'}`,
+    series: 'Choose which championships to show',
+  };
+  $('#page-sub').textContent = subs[P.view];
+  $('#add-btn').hidden = !CONFIG.ADD_EVENT_URL;
+  document.title = P.view === 'list' ? 'Motorsport Calendar' : `${titles[P.view]} · Motorsport Calendar`;
+}
+
+function chipRow() {
+  const allOn = P.hidden.length === 0;
+  return h('div', { class: 'scroller', role: 'group', 'aria-label': 'Championships' },
+    h('button', { class: 'chip all' + (allOn ? ' on' : ''), onclick: () => { P.hidden = []; render(); }, 'aria-pressed': allOn ? 'true' : 'false' }, 'All'),
+    CAT_ORDER.map(code => {
+      const c = CHAMPIONSHIPS[code];
+      const on = !P.hidden.includes(code);
+      return h('button', {
+        class: 'chip' + (on ? ' on' : ''), style: { '--c': c.colour }, title: c.name,
+        'aria-pressed': on ? 'true' : 'false',
+        onclick: () => { P.hidden = on ? [...P.hidden, code] : P.hidden.filter(x => x !== code); render(); },
+      }, h('span', { class: 'dot' }), c.short);
+    }));
+}
+
+function monthPills(activeMonth, onPick) {
+  const now = new Date();
+  const counts = Array(12).fill(0);
+  for (const e of filtered()) for (let m = 0; m < 12; m++) {
+    if (overlaps(e, `${P.year}-${pad(m + 1)}-01`, `${P.year}-${pad(m + 1)}-${pad(dim(P.year, m))}`)) counts[m]++;
+  }
+  const row = h('div', { class: 'scroller', role: 'group', 'aria-label': 'Jump to month' },
+    MON.map((name, m) => h('button', {
+      class: 'month-pill' + (m === activeMonth ? ' active' : '') + (counts[m] ? '' : ' empty') +
+        (P.year === now.getFullYear() && m === now.getMonth() ? ' current' : ''),
+      'aria-label': `${MONTHS[m]}, ${counts[m]} events`,
+      onclick: () => onPick(m),
+    }, name)));
+  requestAnimationFrame(() => {
+    const t = row.querySelector('.active') || row.querySelector('.current');
+    if (t && !wideMQ.matches) row.scrollLeft = t.offsetLeft - 16;
+  });
+  return row;
+}
+
+function renderToolbar() {
+  const tb = $('#toolbar'); tb.replaceChildren();
+  if (P.view === 'series') return;
+  if (P.view === 'list') {
+    const input = h('input', { type: 'search', placeholder: 'Search events or series', value: P.search, 'aria-label': 'Search events', autocomplete: 'off' });
+    let t;
+    input.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => { P.search = input.value; const v = $('#view'); v.replaceChildren(); viewList(v); savePrefs(); }, 120);
+    });
+    tb.append(h('div', { class: 'toolbar-row' },
+      h('label', { class: 'search', style: { flex: '1' } },
+        h('span', { html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.5-4.5"/></svg>' }),
+        input,
+        h('button', { class: 'clear', 'aria-label': 'Clear search', hidden: !P.search, onclick: () => { P.search = ''; render(); } },
+          h('span', { html: '<svg viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m8.5 8.5 7 7m0-7-7 7" stroke="var(--card)" stroke-width="2" stroke-linecap="round"/></svg>' }))
+      ),
+      upcomingToggle()
+    ));
+  }
+  tb.append(chipRow());
+  if (P.view === 'list') tb.append(monthPills(-1, m => jumpList(m)));
+  if (P.view === 'month') tb.append(monthPills(viewMonth(), m => { P.month = m; render(); }));
+}
+
+function upcomingToggle() {
+  const now = new Date().getFullYear();
+  if (P.year !== now) return null;
+  return h('div', { class: 'segmented', style: { display: 'inline-grid', minWidth: '0' }, role: 'tablist', 'aria-label': 'Which events' },
+    [['upcoming', 'Upcoming'], ['all', 'All year']].map(([k, label]) =>
+      h('button', { class: P.listMode === k ? 'active' : '', role: 'tab', 'aria-selected': P.listMode === k ? 'true' : 'false', onclick: () => { P.listMode = k; render(); } }, label)));
+}
+
+function jumpList(m) {
+  const target = document.getElementById(`m-${P.year}-${pad(m + 1)}`);
+  if (target) target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  else { P.view = 'month'; P.month = m; render(); window.scrollTo(0, 0); }
+}
+
+// ---------- Up next ----------
+function upNext() {
+  const t = todayISO();
+  const pool = filtered().filter(e => e.endDate >= t);
+  const live = pool.filter(e => e.startDate <= t);
+  const next = live[0] || pool[0];
+  if (!next) return null;
+  const c = CHAMPIONSHIPS[next.catCode];
+  let num, unit, kicker;
+  const d = dayDiff(t, next.startDate);
+  if (next.startDate <= t) { kicker = 'On now'; num = `Day ${dayDiff(next.startDate, t) + 1}`; unit = `of ${days(next)}`; }
+  else { kicker = 'Up next'; if (d < 14) { num = d; unit = d === 1 ? 'day' : 'days'; } else { num = Math.round(d / 7); unit = 'weeks'; } }
+  const same = pool.filter(e => e !== next && overlaps(e, addDays(next.startDate, -1), addDays(next.endDate, 1))).slice(0, 4);
+  return h('div', {
+    class: 'upnext' + (next.status === 'provisional' ? ' prov' : ''), role: 'button', tabindex: '0',
+    style: { '--c': c.colour, '--on': c.on },
+    onclick: () => openEvent(next), onkeydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openEvent(next); } },
+    'aria-label': `${kicker}: ${next.label}, ${fmtRange(next.startDate, next.endDate)}`,
+  },
+    h('div', { class: 'kicker' }, `${kicker} in ${c.name}`),
+    h('div', {}, h('div', { class: 'title' }, next.label), h('div', { class: 'when' }, fmtRange(next.startDate, next.endDate) + (next.status === 'provisional' ? '  (provisional)' : ''))),
+    h('div', { class: 'count' }, h('div', { class: 'num' }, num), h('div', { class: 'unit' }, unit)),
+    same.length ? h('div', { class: 'also' }, same.map(e => h('span', { style: { '--c2': CHAMPIONSHIPS[e.catCode].colour } }, h('i'), e.label))) : null
+  );
+}
+
+// ---------- Rows ----------
+function eventRow(e) {
+  const c = CHAMPIONSHIPS[e.catCode];
+  const r = rel(e);
+  return h('div', {
+    class: 'row' + (r.past ? ' past' : '') + (r.live ? ' live' : '') + (e.status === 'provisional' ? ' prov' : ''),
+    style: { '--c': c.colour }, role: 'button', tabindex: '0',
+    onclick: () => openEvent(e), onkeydown: ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openEvent(e); } },
+  },
+    h('span', { class: 'bar' }),
+    h('div', { class: 'main' },
+      h('div', { class: 't' }, e.label),
+      h('div', { class: 's' }, h('span', {}, c.short), days(e) > 1 ? h('span', {}, `${days(e)} days`) : null, e.status === 'provisional' ? h('span', { class: 'badge' }, 'Provisional') : null)),
+    h('div', { class: 'end' }, h('div', { class: 'd' }, fmtRange(e.startDate, e.endDate)), h('div', { class: 'rel' }, r.text))
+  );
+}
+
+// ---------- Events (list) view ----------
+function viewList(root) {
+  const t = todayISO();
+  const thisYear = new Date().getFullYear();
+  if (P.year >= thisYear) { const u = upNext(); if (u) root.append(u); }
+  let list = filtered({ search: true }).filter(e => inYear(e, P.year));
+  if (P.year === thisYear && P.listMode === 'upcoming') list = list.filter(e => e.endDate >= t);
+  if (!list.length) {
+    const reason = P.search ? `Nothing matches “${P.search}”.` : P.hidden.length === CAT_ORDER.length ? 'Every championship is hidden.' : `No ${P.listMode === 'upcoming' && P.year === thisYear ? 'upcoming ' : ''}events in ${P.year} for the series you’ve chosen.`;
+    root.append(h('div', { class: 'empty' }, h('h3', {}, 'No events to show'), h('div', {}, reason),
+      P.search ? h('button', { onclick: () => { P.search = ''; render(); } }, 'Clear search')
+        : P.hidden.length ? h('button', { onclick: () => { P.hidden = []; render(); } }, 'Show all series') : null));
+    return;
+  }
+  const byMonth = new Map();
+  for (const e of list) {
+    const m = e.startDate.slice(0, 4) < String(P.year) ? 0 : +e.startDate.slice(5, 7) - 1;
+    if (!byMonth.has(m)) byMonth.set(m, []);
+    byMonth.get(m).push(e);
+  }
+  const now = new Date();
+  const wrap = h('div', { class: 'list' + (wideMQ.matches ? ' cols' : '') });
+  for (const [m, evs] of [...byMonth.entries()].sort((a, b) => a[0] - b[0])) {
+    const isCur = P.year === now.getFullYear() && m === now.getMonth();
+    wrap.append(h('section', { class: 'section', id: `m-${P.year}-${pad(m + 1)}` },
+      h('div', { class: 'section-head' }, h('h2', { class: isCur ? 'cur' : '' }, MONTHS[m]), h('span', { class: 'n' }, `${evs.length}`)),
+      h('div', { class: 'group' }, evs.map(eventRow))));
+  }
+  root.append(wrap);
+}
+
+// ---------- Lane packing ----------
+function lanes(items) {
+  const order = items.map((x, i) => ({ ...x, i })).sort((a, b) => a.s - b.s || (b.e - b.s) - (a.e - a.s));
+  const lanesEnd = []; const out = new Array(items.length);
+  for (const it of order) {
+    let l = lanesEnd.findIndex(end => end < it.s);
+    if (l === -1) { l = lanesEnd.length; lanesEnd.push(it.e); } else lanesEnd[l] = it.e;
+    out[it.i] = l;
+  }
+  return { lane: out, count: lanesEnd.length };
+}
+
+// ---------- Month view ----------
+function viewMonthCal(root) {
+  const y = P.year, m = viewMonth();
+  const wide = wideMQ.matches;
+  const go = delta => {
+    const d = new Date(y, m + delta, 1);
+    if (!years().includes(d.getFullYear())) { toast(`No dates for ${d.getFullYear()} yet`); return; }
+    P.year = d.getFullYear(); P.month = d.getMonth(); render();
+  };
+  const card = h('div', { class: 'month-card' },
+    h('div', { class: 'month-head' },
+      h('h2', {}, MONTHS[m], ' ', h('span', {}, y)),
+      h('div', { class: 'ctrls' },
+        h('button', { class: 'circle-btn', 'aria-label': 'Previous month', onclick: () => go(-1), html: '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2 4 7l5 5"/></svg>' }),
+        h('button', { class: 'pill-btn', onclick: () => { const n = new Date(); if (!years().includes(n.getFullYear())) return; P.year = n.getFullYear(); P.month = n.getMonth(); render(); } }, 'Today'),
+        h('button', { class: 'circle-btn', 'aria-label': 'Next month', onclick: () => go(1), html: '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 2 5 5-5 5"/></svg>' }))),
+    h('div', { class: 'dow' }, DOW.map(d => h('div', {}, wide ? d : d[0])))
+  );
+  const first = new Date(y, m, 1);
+  const start = new Date(y, m, 1 - mondayIndex(first));
+  const weeks = Math.ceil((mondayIndex(first) + dim(y, m)) / 7);
+  const t = todayISO();
+  const BAR = wide ? 22 : 18, GAP = 3, TOP = wide ? 38 : 31;
+  const cellPx = (Math.min(window.innerWidth - (wide ? 56 : 32), 1144)) / 7;
+  const evs = filtered();
+  for (let w = 0; w < weeks; w++) {
+    const ws = new Date(start); ws.setDate(start.getDate() + w * 7);
+    const wsI = iso(ws), weI = addDays(wsI, 6);
+    const week = h('div', { class: 'week' });
+    for (let d = 0; d < 7; d++) {
+      const di = addDays(wsI, d), dd = parse(di);
+      week.append(h('div', { class: 'day' + (d >= 5 ? ' we' : '') + (dd.getMonth() !== m ? ' out' : '') + (di === t ? ' today' : '') },
+        h('div', { class: 'n' }, dd.getDate())));
+    }
+    const items = evs.filter(e => overlaps(e, wsI, weI)).map(e => ({
+      e, s: e.startDate < wsI ? 0 : dayDiff(wsI, e.startDate), e2: e.endDate > weI ? 6 : dayDiff(wsI, e.endDate),
+    })).map(x => ({ ...x, e: x.e, s: x.s, end: x.e2 }));
+    const packed = lanes(items.map(x => ({ s: x.s, e: x.end })));
+    week.style.minHeight = Math.max(wide ? 96 : 64, TOP + packed.count * (BAR + GAP) + 6) + 'px';
+    items.forEach((x, i) => {
+      const c = CHAMPIONSHIPS[x.e.catCode];
+      week.append(h('div', {
+        class: 'ebar' + (x.e.startDate < wsI ? ' cl' : '') + (x.e.endDate > weI ? ' cr' : '') + (x.e.status === 'provisional' ? ' prov' : ''),
+        style: { '--c': c.colour, '--on': c.on, left: `calc(${x.s} / 7 * 100% + 2px)`, width: `calc(${x.end - x.s + 1} / 7 * 100% - 4px)`, top: `${TOP + packed.lane[i] * (BAR + GAP)}px` },
+        title: `${x.e.label}, ${fmtRange(x.e.startDate, x.e.endDate)}`, role: 'button', tabindex: '0',
+        onclick: () => openEvent(x.e), onkeydown: ev => { if (ev.key === 'Enter') openEvent(x.e); },
+      }, fitText(x.e, (x.end - x.s + 1) * cellPx - 12, wide ? 6.6 : 5.6)));
+    });
+    card.append(week);
+  }
+  // swipe between months
+  let sx = 0, sy = 0;
+  card.addEventListener('touchstart', ev => { sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; }, { passive: true });
+  card.addEventListener('touchend', ev => {
+    const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+  }, { passive: true });
+  root.append(card);
+
+  const monthEvs = evs.filter(e => overlaps(e, `${y}-${pad(m + 1)}-01`, `${y}-${pad(m + 1)}-${pad(dim(y, m))}`));
+  root.append(h('section', { class: 'section month-agenda' },
+    h('div', { class: 'section-head' }, h('h2', {}, `This month`), h('span', { class: 'n' }, monthEvs.length)),
+    monthEvs.length ? h('div', { class: 'group' }, monthEvs.map(eventRow)) : h('div', { class: 'group empty' }, `No events in ${MONTHS[m]} for the series you’ve chosen.`)));
+}
+
+// ---------- Year view ----------
+function viewYear(root) {
+  if (wideMQ.matches) yearGrid(root); else yearMinis(root);
+}
+function monthRange(y, m) { return [`${y}-${pad(m + 1)}-01`, `${y}-${pad(m + 1)}-${pad(dim(y, m))}`]; }
+function openMonth(m) { P.view = 'month'; P.month = m; render(); window.scrollTo(0, 0); }
+
+function yearGrid(root) {
+  const y = P.year, t = todayISO(), now = new Date();
+  const wrap = h('div', { class: 'yg-wrap' });
+  const g = h('div', { class: 'yg' });
+  const cellPx = Math.max(30, (Math.min(window.innerWidth - 56, 1144) - 56) / 31);
+  g.append(h('div', { class: 'h corner' }));
+  for (let d = 1; d <= 31; d++) g.append(h('div', { class: 'h' }, d));
+  const evs = filtered();
+  for (let m = 0; m < 12; m++) {
+    const n = dim(y, m), [a, b] = monthRange(y, m);
+    const items = evs.filter(e => overlaps(e, a, b)).map(e => ({ e, s: e.startDate < a ? 1 : +e.startDate.slice(8), end: e.endDate > b ? n : +e.endDate.slice(8) }));
+    const packed = lanes(items.map(x => ({ s: x.s, e: x.end })));
+    const L = Math.max(packed.count, 1);
+    g.append(h('div', { class: 'm' + (y === now.getFullYear() && m === now.getMonth() ? ' cur' : ''), style: { gridRow: `span ${L + 1}` }, role: 'button', tabindex: '0', title: `Open ${MONTHS[m]}`, onclick: () => openMonth(m) }, MON[m]));
+    for (let d = 1; d <= 31; d++) {
+      if (d > n) { g.append(h('div', { class: 'dw na' })); continue; }
+      const wd = mondayIndex(new Date(y, m, d));
+      g.append(h('div', { class: 'dw' + (wd >= 5 ? ' we' : '') }, 'MTWTFSS'[wd]));
+    }
+    for (let l = 0; l < L; l++) {
+      const cells = [];
+      for (let d = 1; d <= 31; d++) {
+        const di = `${y}-${pad(m + 1)}-${pad(d)}`;
+        const wd = d <= n ? mondayIndex(new Date(y, m, d)) : 0;
+        cells.push(h('div', { class: 'lc' + (d > n ? ' na' : wd >= 5 ? ' we' : '') + (l === L - 1 ? ' last' : '') + (di === t ? ' td' : '') }));
+      }
+      items.forEach((x, i) => {
+        if (packed.lane[i] !== l) return;
+        const c = CHAMPIONSHIPS[x.e.catCode];
+        const span = x.end - x.s + 1;
+        cells[x.s - 1].append(h('div', {
+          class: 'ybar' + (span === 1 ? ' one' : '') + (x.e.status === 'provisional' ? ' prov' : ''),
+          style: { '--c': c.colour, '--on': c.on, width: `calc(${span * 100}% - 2px)` },
+          title: `${x.e.label}, ${fmtRange(x.e.startDate, x.e.endDate)}`, role: 'button', tabindex: '0',
+          onclick: () => openEvent(x.e), onkeydown: ev => { if (ev.key === 'Enter') openEvent(x.e); },
+        }, fitText(x.e, span * cellPx - 8, 6.0)));
+      });
+      g.append(...cells);
+    }
+  }
+  wrap.append(g);
+  root.append(wrap);
+}
+
+function yearMinis(root) {
+  const y = P.year, t = todayISO(), now = new Date();
+  const evs = filtered();
+  const grid = h('div', { class: 'minis' });
+  for (let m = 0; m < 12; m++) {
+    const [a, b] = monthRange(y, m);
+    const mEvs = evs.filter(e => overlaps(e, a, b));
+    const cells = [];
+    const lead = mondayIndex(new Date(y, m, 1));
+    for (let i = 0; i < lead; i++) cells.push(h('div', { class: 'md' }));
+    for (let d = 1; d <= dim(y, m); d++) {
+      const di = `${y}-${pad(m + 1)}-${pad(d)}`;
+      const on = mEvs.filter(e => e.startDate <= di && e.endDate >= di);
+      const cols = [...new Set(on.map(e => CHAMPIONSHIPS[e.catCode].colour))].slice(0, 3);
+      cells.push(h('div', { class: 'md' + (di === t ? ' today' : '') }, h('span', {}, d),
+        h('div', { class: 'dots' }, cols.map(c => h('i', { style: { '--c': c } })))));
+    }
+    grid.append(h('button', { class: 'mini' + (y === now.getFullYear() && m === now.getMonth() ? ' cur' : ''), onclick: () => openMonth(m), 'aria-label': `${MONTHS[m]}, ${mEvs.length} events` },
+      h('div', { class: 'mini-head' }, h('b', {}, MON[m]), h('span', {}, mEvs.length ? `${mEvs.length}` : '')),
+      h('div', { class: 'mini-grid' }, cells)));
+  }
+  root.append(grid);
+}
+
+// ---------- Series (settings) view ----------
+function sw(checked, onchange, label) {
+  return h('span', { class: 'switch' },
+    h('input', { type: 'checkbox', role: 'switch', checked: checked, 'aria-label': label, onchange: ev => onchange(ev.target.checked) }),
+    h('span', { class: 'track' }), h('span', { class: 'thumb' }));
+}
+function viewSeries(root) {
+  const wrap = h('div', { class: 'settings' });
+  const counts = {};
+  for (const e of S.events) if (inYear(e, P.year)) counts[e.catCode] = (counts[e.catCode] || 0) + 1;
+  wrap.append(h('div', { class: 'set-group' },
+    h('div', { class: 'set-head' }, `Championships in ${P.year}`),
+    h('div', { class: 'group' },
+      CAT_ORDER.map(code => {
+        const c = CHAMPIONSHIPS[code];
+        const n = counts[code] || 0;
+        return h('div', { class: 'srow' },
+          h('span', { class: 'icon', style: { '--c': c.colour, '--on': c.on } }, code === 'WelshRC' ? 'WEL' : code === 'ScotRC' ? 'SCO' : code === 'Asphalt' ? 'ASP' : code === 'EngRC' ? 'ENG' : code),
+          h('span', { class: 'txt' }, h('b', {}, c.name), h('small', {}, n ? `${n} ${n === 1 ? 'event' : 'events'}` : 'No dates yet')),
+          sw(!P.hidden.includes(code), on => { P.hidden = on ? P.hidden.filter(x => x !== code) : [...P.hidden, code]; savePrefs(); renderChrome(years()); }, `Show ${c.name}`));
+      })),
+    h('div', { class: 'group', style: { marginTop: '12px' } },
+      h('button', { class: 'srow plain action', onclick: () => { P.hidden = []; render(); } }, 'Show all'),
+      h('button', { class: 'srow plain action', onclick: () => { P.hidden = [...CAT_ORDER]; render(); } }, 'Hide all')),
+    h('div', { class: 'set-foot' }, 'Your choices are saved on this device only.')));
+
+  wrap.append(h('div', { class: 'set-group' },
+    h('div', { class: 'set-head' }, 'Your calendar'),
+    h('div', { class: 'group' },
+      h('button', { class: 'srow plain action', onclick: exportVisible }, `Add ${P.year} events to my calendar`)),
+    h('div', { class: 'set-foot' }, 'Downloads a calendar file with the events for the series you’re showing. On iPhone, tap it to add them to Calendar.')));
+
+  const srcText = S.source === 'sheet' ? 'Google Sheet' : S.source === 'cached' ? 'Saved copy of sheet' : 'Built into the site';
+  wrap.append(h('div', { class: 'set-group' },
+    h('div', { class: 'set-head' }, 'Dates'),
+    h('div', { class: 'group' },
+      h('div', { class: 'srow plain' }, h('span', { class: 'txt' }, h('b', {}, 'Source')), h('span', { class: 'val' }, srcText)),
+      h('div', { class: 'srow plain' }, h('span', { class: 'txt' }, h('b', {}, 'Events')), h('span', { class: 'val tabular' }, S.events.length)),
+      S.updatedAt ? h('div', { class: 'srow plain' }, h('span', { class: 'txt' }, h('b', {}, 'Last checked')), h('span', { class: 'val' }, new Date(S.updatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))) : null,
+      CONFIG.DATA_URL ? h('button', { class: 'srow plain action', onclick: () => loadData({ announce: true }) }, 'Check for updates now') : null,
+      CONFIG.ADD_EVENT_URL ? h('button', { class: 'srow plain action', onclick: openAdd }, 'Add or edit events') : null),
+    h('div', { class: 'set-foot' },
+      S.skipped ? `${S.skipped} ${S.skipped === 1 ? 'row' : 'rows'} in the sheet couldn’t be read. Check the championship code and dates (YYYY-MM-DD). ` : '',
+      'Striped events are provisional: the date is announced but the championship hasn’t confirmed it as a round yet.')));
+  root.append(wrap);
+}
+
+function renderFoot() {
+  const src = S.source === 'sheet' ? 'live from the shared sheet' : S.source === 'cached' ? 'from a saved copy of the sheet' : 'built into this page';
+  $('#foot').textContent = `${S.events.length} events, ${src}.`;
+}
+
+// ============================================================
+// Event sheet
+// ============================================================
+let lastFocus = null;
+function openEvent(e) {
+  const c = CHAMPIONSHIPS[e.catCode];
+  const r = rel(e);
+  const sheet = $('#sheet');
+  const same = ['F1','F2','F3'].includes(e.catCode) ? [] : S.events.filter(x => x !== e && !['F1','F2','F3'].includes(x.catCode) && x.label.replace(/^\S+\s(R\d+\s)?/, '') === e.label.replace(/^\S+\s(R\d+\s)?/, '') && x.startDate === e.startDate);
+  sheet.replaceChildren(...[
+    h('div', { class: 'grabber', 'aria-hidden': 'true' }),
+    h('div', { class: 'sheet-top' }, h('button', { class: 'done', onclick: closeSheet }, 'Done')),
+    h('div', { class: 'hero' + (e.status === 'provisional' ? ' prov' : ''), style: { '--c': c.colour, '--on': c.on } },
+      h('div', { class: 'series' }, c.name),
+      h('h2', {}, e.label),
+      h('div', { class: 'dates' }, fmtRange(e.startDate, e.endDate), ', ', e.startDate.slice(0, 4))),
+    h('div', { class: 'group' },
+      h('div', { class: 'kv' }, h('span', {}, 'Starts'), h('span', { class: 'v' }, fmtLong(e.startDate))),
+      e.endDate !== e.startDate ? h('div', { class: 'kv' }, h('span', {}, 'Ends'), h('span', { class: 'v' }, fmtLong(e.endDate))) : null,
+      h('div', { class: 'kv' }, h('span', {}, 'Length'), h('span', { class: 'v' }, days(e) === 1 ? '1 day' : `${days(e)} days`)),
+      h('div', { class: 'kv' }, h('span', {}, 'When'), h('span', { class: 'v' + (r.live ? ' live' : '') }, r.text)),
+      h('div', { class: 'kv' }, h('span', {}, 'Status'), h('span', { class: 'v' }, e.status === 'provisional' ? 'Provisional' : 'Confirmed'))),
+    (e.note || e.status === 'provisional') ? h('div', { class: 'note' },
+      e.note ? e.note + ' ' : '',
+      e.status === 'provisional' && !e.note ? 'The date is announced, but the championship hasn’t confirmed it as a round yet.' : '') : null,
+    same.length ? h('div', { class: 'note' }, 'Also counts for ', same.map(x => CHAMPIONSHIPS[x.catCode].name).join(', '), '.') : null,
+    h('div', { class: 'group' },
+      h('button', { class: 'act', onclick: () => { downloadICS([e], slug(e.label)); } }, 'Add to my calendar'),
+      h('button', { class: 'act', onclick: () => { closeSheet(); P.view = 'month'; P.year = +e.startDate.slice(0, 4); P.month = +e.startDate.slice(5, 7) - 1; render(); window.scrollTo(0, 0); } }, 'Show in month'))
+  ].filter(Boolean));
+  lastFocus = document.activeElement;
+  $('#backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  sheet.scrollTop = 0;
+  setTimeout(() => sheet.querySelector('.done').focus({ preventScroll: true }), 50);
+}
+function closeSheet() {
+  $('#backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+  const s = $('#sheet'); s.style.transform = '';
+  if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+}
+$('#backdrop').addEventListener('click', ev => { if (ev.target.id === 'backdrop') closeSheet(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && $('#backdrop').classList.contains('open')) closeSheet(); });
+(() => { // drag the sheet down to close
+  const s = $('#sheet'); let y0 = null, dy = 0;
+  s.addEventListener('touchstart', ev => { if (s.scrollTop <= 0) { y0 = ev.touches[0].clientY; dy = 0; s.classList.add('dragging'); } }, { passive: true });
+  s.addEventListener('touchmove', ev => { if (y0 == null) return; dy = Math.max(0, ev.touches[0].clientY - y0); if (dy > 0) s.style.transform = `translateY(${dy}px)`; }, { passive: true });
+  s.addEventListener('touchend', () => { if (y0 == null) return; s.classList.remove('dragging'); if (dy > 110) closeSheet(); else s.style.transform = ''; y0 = null; });
+})();
+
+// ============================================================
+// Calendar files (.ics)
+// ============================================================
+function icsText(list) {
+  const esc = s => String(s).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const out = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Motorsport Calendar//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Motorsport Calendar'];
+  for (const e of list) {
+    const c = CHAMPIONSHIPS[e.catCode];
+    out.push('BEGIN:VEVENT', `UID:${e.id}@motorsport-calendar`, `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${e.startDate.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${addDays(e.endDate, 1).replace(/-/g, '')}`,
+      `SUMMARY:${esc(e.label)}`, `DESCRIPTION:${esc(c.name + (e.status === 'provisional' ? ' (provisional)' : ''))}`,
+      `CATEGORIES:${esc(c.name)}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
+  }
+  out.push('END:VCALENDAR');
+  return out.join('\r\n');
+}
+function downloadICS(list, name) {
+  const blob = new Blob([icsText(list)], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: `${name}.ics` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast(list.length === 1 ? 'Calendar file downloaded' : `${list.length} events downloaded`);
+}
+function exportVisible() {
+  const list = filtered().filter(e => inYear(e, P.year));
+  if (!list.length) { toast('No events to add. Turn on a series first.'); return; }
+  downloadICS(list, `motorsport-calendar-${P.year}`);
+}
+function openAdd() { if (CONFIG.ADD_EVENT_URL) window.open(CONFIG.ADD_EVENT_URL, '_blank', 'noopener'); }
+
+// ============================================================
+// Toast
+// ============================================================
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ============================================================
+// Wiring
+// ============================================================
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+  if (P.view === b.dataset.view) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  P.view = b.dataset.view; render(); window.scrollTo(0, 0);
+}));
+$('#year-select').addEventListener('change', ev => {
+  P.year = +ev.target.value;
+  const now = new Date();
+  P.month = P.year === now.getFullYear() ? now.getMonth() : 0;
+  render();
+});
+$('#export-btn').addEventListener('click', exportVisible);
+$('#add-btn').addEventListener('click', openAdd);
+window.addEventListener('scroll', () => $('#navbar').classList.toggle('scrolled', window.scrollY > 40), { passive: true });
+wideMQ.addEventListener('change', render);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && CONFIG.DATA_URL && Date.now() - S.lastFetch > CONFIG.REFRESH_MINUTES * 60000) loadData();
+});
+setInterval(() => { if (document.visibilityState === 'visible' && CONFIG.DATA_URL) loadData(); }, Math.max(1, CONFIG.REFRESH_MINUTES) * 60000);
+// Re-render just after midnight so "today" and countdowns stay right if the app is left open.
+(function scheduleMidnight() { const n = new Date(); const ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 5) - n; setTimeout(() => { render(); scheduleMidnight(); }, ms); })();
+
+// Start: show the last saved sheet (or built-in dates) straight away, then refresh.
+const cached = CONFIG.DATA_URL ? storeGet(CACHE_KEY) : null;
+const fromCache = cached && cached.text ? eventsFromCSV(cached.text) : null;
+if (fromCache && fromCache.events.length) setEvents(fromCache.events, 'cached', cached.at, fromCache.skipped);
+else setEvents(BUILT_IN, 'built-in', null, 0);
+loadData();
+</script>
+</body>
+</html>
